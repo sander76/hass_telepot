@@ -11,9 +11,9 @@ Put the `hass_telepot.py` file in your `custom_components` folder which should b
 
 Put the following in your `configuration.yaml` file.
 
-```yamlex
+```yaml
 hass_telepot:
-    bot_token : <your bot token>
+    bot_token : your bot token
     allowed_chat_ids :
     -   your chat id(s)
     commands:
