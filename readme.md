@@ -1,6 +1,6 @@
 # hass_telepot
 
-WORK IN PROGRESS
+Inspired by: https://github.com/GussyH/hass-telebot
 
 A home assistant custom component which allows for sending and receiving telegram commands to control HomeAsisstant.
 
