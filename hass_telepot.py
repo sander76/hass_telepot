@@ -23,16 +23,10 @@ RESPONSE = 'response'
 RESPONSE_TEXT = 'text'
 RESPONSE_KEYBOARD = 'keyboard'
 
-RESPONSE_KEYS_SCHEMA = vol.Schema({
-    vol.Required(vol.Any(RESPONSE_TEXT, RESPONSE_KEYBOARD)): object
-}, extra=vol.ALLOW_EXTRA)
-
-RESPONSE_DATA_SCHEMA = vol.Schema({
-    vol.Optional(RESPONSE_TEXT): cv.string,
+RESPONSE_SCHEMA = vol.Schema({
+    vol.Required(RESPONSE_TEXT): cv.string,
     vol.Optional(RESPONSE_KEYBOARD): vol.All(cv.ensure_list, [cv.string])
 })
-
-RESPONSE_SCHEMA = vol.All(RESPONSE_KEYS_SCHEMA, RESPONSE_DATA_SCHEMA)
 
 COMMAND_SCHEMA = vol.Schema({
     vol.Required(COMMAND): cv.string,
@@ -81,6 +75,7 @@ def setup(hass, config):
     )
 
     def get_command(command):
+        """Gets the proper command"""
         for _cmd in commands:
             if _cmd.command == command:
                 return _cmd
@@ -121,11 +116,9 @@ class Instruction:
 
         _response = command.get(RESPONSE, None)
         if _response is not None:
-            self.response = {}
-            _text = _response.get(RESPONSE_TEXT, None)
+            self.response = {
+                RESPONSE_TEXT: _response.get(RESPONSE_TEXT, None)}
             _keyboard = _response.get(RESPONSE_KEYBOARD, None)
-            if _text:
-                self.response[RESPONSE_TEXT] = _text
             if _keyboard:
                 self.response[RESPONSE_KEYBOARD] = {
                     "keyboard": [],
@@ -136,6 +129,8 @@ class Instruction:
                     self.response[RESPONSE_KEYBOARD]["keyboard"].append(
                         [{"text": _key}]
                     )
+            else:
+                self.response[RESPONSE_KEYBOARD] = None
 
     def execute(self, chat_id):
         if self.script:
@@ -143,4 +138,5 @@ class Instruction:
         if self.response:
             self.bot.sendMessage(chat_id,
                                  self.response[RESPONSE_TEXT],
+                                 parse_mode="Markdown",
                                  reply_markup=self.response[RESPONSE_KEYBOARD])
