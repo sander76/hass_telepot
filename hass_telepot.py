@@ -31,7 +31,8 @@ RESPONSE_SCHEMA = vol.Schema({
 COMMAND_SCHEMA = vol.Schema({
     vol.Required(COMMAND): cv.string,
     vol.Optional(SCRIPT): cv.SCRIPT_SCHEMA,
-    vol.Optional(RESPONSE): RESPONSE_SCHEMA
+    vol.Optional(RESPONSE): RESPONSE_SCHEMA,
+    vol.Optional(ALLOWED_CHAT_IDS): vol.All(cv.ensure_list, [cv.string])
 }, extra=vol.ALLOW_EXTRA)
 
 CONFIG_SCHEMA = vol.Schema({
@@ -56,6 +57,7 @@ def setup(hass, config):
     # Build a list of telegram commands.
     commands = [Instruction(hass, bot, _command) for _command in
                 config[DOMAIN].get(COMMANDS)]
+    not_found_command = BaseInstruction(bot)
 
     def _start_bot(_event):
         bot.message_loop(handle)
@@ -74,12 +76,12 @@ def setup(hass, config):
         _stop_bot
     )
 
-    def get_command(command):
+    def get_command(command, chat_id):
         """Gets the proper command"""
         for _cmd in commands:
-            if _cmd.command == command:
+            if _cmd.contains(command, chat_id):
                 return _cmd
-        raise UserWarning("telegram command not found.")
+        return not_found_command
 
     def handle(msg):
         """Callback function which handles incoming telegram messages."""
@@ -92,7 +94,7 @@ def setup(hass, config):
         if (content_type == 'text') and (chat_id in allowed_chat_ids):
             command = msg['text']
             try:
-                _cmd = get_command(command)
+                _cmd = get_command(command, chat_id)
             except UserWarning as ex:
                 logger.error(ex)
                 raise
@@ -102,18 +104,44 @@ def setup(hass, config):
     return True
 
 
-class Instruction:
-    def __init__(self, hass, bot, command):
-        self.hass = hass
-        self.bot = bot
+class BaseInstruction:
+    def __init__(self, bot):
         self.script = None
+        self.response = {RESPONSE_TEXT: "Command not found or not allowed",
+                         RESPONSE_KEYBOARD: None}
+        self.bot = bot
+        self.allowed_ids = None
+        self.command = None
+
+    def contains(self, command, chat_id):
+        if command == self.command:
+            if self.allowed_ids is None:
+                return True
+            elif chat_id in self.allowed_ids:
+                return True
+        return False
+
+    def execute(self, chat_id):
+        if self.script:
+            self.script.run()
+        if self.response:
+            self.bot.sendMessage(chat_id,
+                                 self.response[RESPONSE_TEXT],
+                                 parse_mode="Markdown",
+                                 reply_markup=self.response[RESPONSE_KEYBOARD])
+
+
+class Instruction(BaseInstruction):
+    def __init__(self, hass, bot, command):
+        BaseInstruction.__init__(self, bot)
+        self.hass = hass
         self.response = None
         self.command = command[COMMAND]
+        self.allowed_ids = command.get(ALLOWED_CHAT_IDS, None)
 
         _script = command.get(SCRIPT, None)
         if _script is not None:
             self.script = Script(hass, _script)
-
         _response = command.get(RESPONSE, None)
         if _response is not None:
             self.response = {
@@ -131,12 +159,3 @@ class Instruction:
                     )
             else:
                 self.response[RESPONSE_KEYBOARD] = None
-
-    def execute(self, chat_id):
-        if self.script:
-            self.script.run()
-        if self.response:
-            self.bot.sendMessage(chat_id,
-                                 self.response[RESPONSE_TEXT],
-                                 parse_mode="Markdown",
-                                 reply_markup=self.response[RESPONSE_KEYBOARD])
