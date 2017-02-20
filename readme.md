@@ -2,7 +2,7 @@
 
 Inspired by: https://github.com/GussyH/hass-telebot
 
-A home assistant custom component which allows for sending and receiving telegram commands to control HomeAsisstant.
+A home assistant custom component which allows for sending and receiving telegram commands to control HomeAssistant.
 
 ## Installation
 Put the `hass_telepot.py` file in your `custom_components` folder which should by default be in the same folder as your `configuration.yaml` file. Create the folder if it is not there.
@@ -20,7 +20,7 @@ hass_telepot:
     commands:
     -   command: /away  # The command you send using your telegram client.
         allowed_ids:  # Optional
-        - id1  # This commands is only allowed for id1
+        - id1  # This command is only allowed for id1
         script:  # A hass script you activate when you send the above command.
             service: input_boolean.turn_on
             entity_id: input_boolean.away
