@@ -45,15 +45,19 @@ CONFIG_SCHEMA = vol.Schema({
 
 
 def setup(hass, config):
-    """Setup is called when Home Assistant is loading our component."""
-    logger = logging.getLogger(__name__)
     import telepot
-
     bot_token = config[DOMAIN].get(BOT_TOKEN)
-    allowed_chat_ids = config[DOMAIN].get(ALLOWED_CHAT_IDS)
-
     # instance the Telegram bot
     bot = telepot.Bot(bot_token)
+    _setup(hass, config, bot, telepot)
+
+
+def _setup(hass, config, bot, telepot):
+    """Setup is called when Home Assistant is loading our component."""
+    logger = logging.getLogger(__name__)
+
+    allowed_chat_ids = config[DOMAIN].get(ALLOWED_CHAT_IDS)
+
     # Build a list of telegram commands.
     commands = [Instruction(hass, bot, _command) for _command in
                 config[DOMAIN].get(COMMANDS)]
@@ -99,6 +103,8 @@ def setup(hass, config):
                 logger.error(ex)
                 raise
             _cmd.execute(chat_id)
+        else:
+            not_found_command.execute(chat_id)
 
     # Return boolean to indicate that initialization was successfully.
     return True
