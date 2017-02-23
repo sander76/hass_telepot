@@ -49,7 +49,7 @@ def setup(hass, config):
     bot_token = config[DOMAIN].get(BOT_TOKEN)
     # instance the Telegram bot
     bot = telepot.Bot(bot_token)
-    _setup(hass, config, bot, telepot)
+    return _setup(hass, config, bot, telepot)
 
 
 def _setup(hass, config, bot, telepot):
